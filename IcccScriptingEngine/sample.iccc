@@ -1,0 +1,12 @@
+VARIABLE m_euler_copy = math_EULER;
+VARIABLE pi = math_PI;
+
+VARIABLE str = "Hello World yeet\n";
+PRINT m_EULER;
+
+VARIABLE[] data_set;
+
+LOOP 24 START
+    PRINT "Hello World on repeat\n";
+    data_set.APPEND();
+END
