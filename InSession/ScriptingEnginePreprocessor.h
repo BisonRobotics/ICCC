@@ -10,6 +10,7 @@ private:
     std::string filename;
     std::vector<char> proc_buffer; // processed file contents
     std::vector<char> orig_buffer; // original file contents
+    std::vector<std::string> token_buffer; //
 
 public:
     // constructor
@@ -18,7 +19,30 @@ public:
     // process function
     void process(void);
 
+    // generate tokens
+    void tokenize(void);
+
+    std::vector<std::string> getTokenBuffer(void) {
+        return token_buffer;
+    }
 };
+
+void Preprocessor::tokenize(void) {
+    const int STATE_default = 0; // looks for KEYWORD, QUOTE, COMMENT
+    const int STATE_keyword = 1; // different based on specific keyword
+    const int STATE_comment = 2; // comments should NOT get included in the token_buffer
+
+    // keyword states
+    const int STATE_kw_variable = 3;
+    const int STATE_kw_print    = 4;
+    const int STATE_kw_math     = 5;
+
+    int current_state = STATE_default;
+
+    std::ofstream output("/tmp/output_file", std::ios::trunc | std::ios::binary);
+    output.write(&proc_buffer[0], proc_buffer.size() - 1);
+    output.close();
+}
 
 Preprocessor::Preprocessor(const std::string& filename) {
     this->filename = filename;
