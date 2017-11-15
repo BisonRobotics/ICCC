@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <string.h>
 #include <stdlib.h>
 
 // hold variables and need a stack
@@ -26,7 +27,8 @@ struct Variable {
     }
 };
 
-int setup_variable(std::string input);
+bool setup_variable(const std::string& input, SinglyLinkedList<Variable>& sll_var);
+bool print_command(const std::string& input, SinglyLinkedList<Variable>& sll_var);
 
 int execute_script(const std::vector<std::string>& tb) {
     SinglyLinkedList<Variable> sll_vars;
@@ -41,24 +43,90 @@ int execute_script(const std::vector<std::string>& tb) {
     for(int i = 0; i < tb.size(); i++) {
         std::string token = tb[i];
 
+        //std::cout << current_state << ' ' << token << std::endl;
+
         switch(current_state) {
-            STATE_default:
+            case STATE_default:
+                std::cout << "=== state default\n";
                 if(token == "VARIABLE") {
+                    std::cout << "=== changing state to STATE_variable\n";
                     current_state = STATE_variable;
+                } else if(token == "PRINT") {
+                    std::cout << "=== changing state to STATE_print\n";
+                    current_state = STATE_print;
                 } else {
                     std::cerr << "UNKNOWN TOKEN IN DEFAULT STATE: " << token << std::endl;
                     exit(1);
                 }
                 break;
-            STATE_variable:
-                setup_variable(token, sll_vars);
+            case STATE_variable:
+                if(setup_variable(token, sll_vars))
+                    current_state = STATE_default;
+                break;
+            case STATE_print:
+                if(print_command(token, sll_vars))
+                    current_state = STATE_default;
                 break;
             default:
+                std::cerr << "=== unknown state in primary state machine\n";
+                exit(1);
                 break;
         }
 
     }
 
+}
+
+bool print_command(const std::string& input, SinglyLinkedList<Variable>& sll_var) {
+    if(input == ";")
+        return true;
+
+    Variable var(input, 0.0);
+    double var_value;
+
+    if(sll_var.searchFor(var)) {
+        std::vector<Variable>* vars = sll_var.getValuesAsVector();
+
+        for(Variable v : (*vars)) {
+            if(var == v) {
+                var_value = v.data;
+                break;
+            }
+        }
+
+        std::cout << var_value;
+
+        delete vars;
+    } else if(input[0] == '"') {
+        bool special_char = false;
+        for(int i = 1; i < input.length()-1; i++) {
+            if(special_char) {
+                switch(input[i]) {
+                    case 'n':
+                        std::cout << std::endl; break;
+                    case 't':
+                        std::cout << '\t'; break;
+                    case 's':
+                        std::cout << ' '; break;
+                    case '\\':
+                        std::cout << '\\';
+                    default:
+                        std::cerr << "unknown escape character encountered: " << input[i] << std::endl;
+                        exit(1);
+                        break;
+                }
+                special_char = false;
+            } else if(input[i] == '\\') {
+                special_char = true;
+            } else {
+                std::cout << input[i];
+            }
+        }
+    } else {
+        std::cout << std::stod(input);
+    }
+
+    return false;
 }
 
 bool setup_variable(const std::string& input, SinglyLinkedList<Variable>& sll_var) {
@@ -67,45 +135,65 @@ bool setup_variable(const std::string& input, SinglyLinkedList<Variable>& sll_va
     const int STATE_expect_semicolon = 2;
 
     static int current_state = STATE_expect_name;
+
+    // stuff for variables
     static std::string var_name;
     static double      var_value;
 
     switch(current_state) {
         case STATE_expect_name:
-            if(sll_var.searchFor(Variable(input, 0.0))) {
-                std::cerr << "VARIABLE: " << input << " ALREADY EXISTS" << std::endl;
-                exit(1);
-            } else {
-                var_name = input;
-                current_state = STATE_expect_value;
-                return false;
+            {
+                Variable var(input, 0.0);
+                if(sll_var.searchFor(var)) {
+                    std::cerr << "VARIABLE: " << input << " ALREADY EXISTS" << std::endl;
+                    exit(1);
+                } else {
+                    var_name = input;
+                    current_state = STATE_expect_value;
+                    return false;
+                }
             }
             break;
         case STATE_expect_value:
-            if(sll_var.searchFor(Variable(input, 0.0))) {
-                std::vector<Variable>* vec_ptr = sll_var.getValuesAsVector();
+            {
+                Variable var(input, 0.0);
+                if(sll_var.searchFor(var)) {
+                    std::vector<Variable>* vars = sll_var.getValuesAsVector();
 
-                int s = vec_ptr->size();
-                Variable v(input, 0.0);
-
-                for(int i = 0; i < s; i++) {
-                    if(vec_ptr->at(i) == v) {
-                        var_value = vec_ptr->at(i).data;
-                        current_state = STATE_expect_semicolon;
-                        delete vec_ptr;
-                        return false;
+                    for(Variable v : (*vars)) {
+                        if(var == v) {
+                            std::cout << "=== Variable with same name found\n";
+                            var_value = v.data;
+                        }
                     }
-                }
 
-                std::cerr << "VARIABLE IN LIST, BUT NOT FOUND" << std::endl;
-                exit(1);
-            } else {
-                var_value = std::stod(input);
-                current_state = STATE_expect_semicolon;
-                return false;
+                    delete vars;
+                    current_state = STATE_expect_semicolon;
+                    return false;
+                } else {
+                    var_value = std::stod(input);
+                    current_state = STATE_expect_semicolon;
+                    return false;
+                }
             }
             break;
         case STATE_expect_semicolon:
+            if(input != ";") {
+                std::cerr << "SEMI-COLON EXPECTED: " << input << std::endl;
+                exit(1);
+            }
+            current_state = STATE_expect_name;
+
+            sll_var.addHead(Variable(var_name, var_value));
+
+            {
+                std::vector<Variable>* vars = sll_var.getValuesAsVector();
+                for(Variable v : (*vars)) {
+                    std::cout << "=== new variable: " << v.name << " : " << v.data << std::endl;
+                }
+            }
+
+            return true;
         default:
             std::cerr << "UNKNOWN STATE IN setup_variable" << std::endl;
             exit(1);
