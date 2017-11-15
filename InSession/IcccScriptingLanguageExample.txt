@@ -6,8 +6,8 @@ PRINT
 MATH
 */
 
-VARIABLE OtherVar 3.14159
-VARIABLE NewVarName OtherVar
+VARIABLE OtherVar 3.14159 ;
+VARIABLE NewVarName OtherVar ;
 
 PRINT "New variable: " NewVarName;
 

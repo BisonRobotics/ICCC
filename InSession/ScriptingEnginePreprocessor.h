@@ -1,6 +1,7 @@
 #ifndef __SCRIPTING__ENGINE__PREPROCESSOR__H__
 #define __SCRIPTING__ENGINE__PREPROCESSOR__H__
 
+#include <iostream>
 #include <string>  // filename
 #include <vector>  // character buffer
 #include <fstream> // file stream
@@ -10,7 +11,9 @@ private:
     std::string filename;
     std::vector<char> proc_buffer; // processed file contents
     std::vector<char> orig_buffer; // original file contents
-    std::vector<std::string> token_buffer; //
+
+    std::vector<std::string> token_buffer; // processed token stream
+    std::vector<std::string> orig_token_buffer;  // original token stream
 
 public:
     // constructor
@@ -22,26 +25,55 @@ public:
     // generate tokens
     void tokenize(void);
 
-    std::vector<std::string> getTokenBuffer(void) {
-        return token_buffer;
+    std::vector<std::string>* getTokenBuffer(void) {
+        return &token_buffer;
     }
 };
 
 void Preprocessor::tokenize(void) {
-    const int STATE_default = 0; // looks for KEYWORD, QUOTE, COMMENT
-    const int STATE_keyword = 1; // different based on specific keyword
-    const int STATE_comment = 2; // comments should NOT get included in the token_buffer
-
-    // keyword states
-    const int STATE_kw_variable = 3;
-    const int STATE_kw_print    = 4;
-    const int STATE_kw_math     = 5;
-
-    int current_state = STATE_default;
-
     std::ofstream output("/tmp/output_file", std::ios::trunc | std::ios::binary);
     output.write(&proc_buffer[0], proc_buffer.size() - 1);
     output.close();
+
+    std::ifstream input("/tmp/output_file");
+
+    std::string tmp_input;
+    while((input >> tmp_input)) {
+        orig_token_buffer.push_back(tmp_input);
+    }
+    input.close();
+
+    // state machine states
+    const int STATE_default = 0; // looks for KEYWORD, QUOTE, COMMENT
+    const int STATE_comment = 1; // comments should NOT get included in the token_buffer
+
+    int current_state = STATE_default;
+    for(std::string str : orig_token_buffer) {
+        switch(current_state) {
+            case STATE_default:
+                if(str == "/*") { // beginning of comment
+                    current_state = STATE_comment;
+                } else {
+                    token_buffer.push_back(str);
+                }
+                break;
+
+            case STATE_comment:
+                if(str == "*/") {
+                    current_state = STATE_default;
+                }
+                break;
+
+            default:
+                std::cerr << "UNKNOWN STATE: " << current_state << std::endl;
+                exit(1);
+        }
+    }
+
+    for(std::string str : token_buffer) {
+        std::cout << str << std::endl;
+    }
+
 }
 
 Preprocessor::Preprocessor(const std::string& filename) {
@@ -107,7 +139,7 @@ void Preprocessor::process(void) {
     }
 
     proc_buffer.push_back('\0');
-    std::cout << &proc_buffer[0] << std::endl;
+    //std::cout << &proc_buffer[0] << std::endl;
 }
 
 #endif // __SCRIPTING__ENGINE__PREPROCESSOR__H__

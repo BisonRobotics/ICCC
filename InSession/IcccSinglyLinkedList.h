@@ -2,6 +2,7 @@
 #define __ICCC__SINGLY__LINKED__LIST__
 
 #include <iostream>
+#include <vector>
 
 // always use a primtive
 template<typename T>
@@ -25,6 +26,18 @@ public:
 
     SinglyLinkedList(T data) {
         head = new Node<T>(data, head);
+    }
+
+    bool searchFor(T& t) {
+        Node<T>* tmp = head;
+
+        while(tmp != 0) {
+            if(t == tmp->data)
+                return true;
+            tmp = tmp->next;
+        }
+
+        return false;
     }
 
     ~SinglyLinkedList(void) {
@@ -61,6 +74,18 @@ public:
 
     void addHead(T data) {
         head = new Node<T>(data, head);
+    }
+
+    std::vector<T>* getValuesAsVector(void) {
+        std::vector<T>* ret_vec = new std::vector<T>();
+
+        Node<T>* tmp = head;
+        while(tmp != NULL) {
+            ret_vec->push_back(tmp->data);
+            tmp = tmp->next;
+        }
+
+        return ret_vec;
     }
 
 };
