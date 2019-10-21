@@ -8,7 +8,6 @@ int main() {
     srand(time(NULL));
     int r = rand() % 32;
 
-
     while(true) {
 
         int guess;
@@ -28,3 +27,13 @@ int main() {
 
     return 0;
 }
+
+
+/*
+
+    preprocessor stuff
+    byte padding
+    access modifiers
+    methods
+
+*/
